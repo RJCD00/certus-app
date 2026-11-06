@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#001E64">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Certus">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="192x192" href="img/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
+<link rel="shortcut icon" href="img/icon-192.png">
+<title>Certus</title>
+<style>
+  :root{
+    --navy:#001E64; --blue:#1f73e0; --ink:#2f2f33; --muted:#9aa0a8;
+    --line:#ededed; --bg:#ffffff; --nav-h:62px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Segoe UI",Roboto,system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink); background:var(--bg); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{display:block;}
+
+  /* ---------- SPLASH ---------- */
+  #splash{
+    position:fixed; inset:0; z-index:100;
+    background:linear-gradient(180deg,#ffffff 0%,#fbfaf8 55%,#f4f3f1 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:opacity .5s ease;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+  }
+  #splash.hide{opacity:0; pointer-events:none;}
+  #splash .logo{
+    width:62%; max-width:300px;
+    animation:pulse 1.5s ease-in-out infinite;
+    filter:drop-shadow(0 6px 14px rgba(0,30,100,.10));
+  }
+  @keyframes pulse{
+    0%{transform:scale(.90);} 50%{transform:scale(1.07);} 100%{transform:scale(.90);}
+  }
+  #loadtext{
+    position:absolute; left:0; right:0; bottom:calc(26px + env(safe-area-inset-bottom));
+    text-align:center; color:#9a9a9a; font-size:13px; letter-spacing:.2px;
+  }
+  #ver{
+    position:absolute; right:16px; bottom:calc(24px + env(safe-area-inset-bottom));
+    color:#b4b4b4; font-size:12px;
+  }
+
+  /* ---------- APP SHELL ---------- */
+  #app{position:fixed; inset:0; display:none; flex-direction:column;}
+  #app.show{display:flex;}
+  .screen{display:none; flex:1; overflow:hidden; flex-direction:column;}
+  .screen.active{display:flex;}
+
+  /* ---------- HEADER (inicio) ---------- */
+  .hdr{
+    background:var(--navy); color:#fff; flex-shrink:0;
+    padding:calc(14px + env(safe-area-inset-top)) 18px 16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .hdr .ava{
+    width:42px; height:42px; border-radius:50%; background:#fff;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .hdr .ava svg{width:26px;height:26px;fill:var(--navy);}
+  .hdr .hi{font-size:17px; font-weight:700; flex:1;}
+  .hdr .hi small{display:block;font-weight:400;opacity:.0;height:0;}
+  .hdr .ico{display:flex; gap:16px;}
+  .hdr .ico svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8;}
+
+  /* ---------- SCROLL BODY ---------- */
+  .body{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:16px;}
+  .sect-title{font-size:19px; font-weight:800; color:#20232a; padding:18px 18px 10px;}
+  .sect-title .accent{color:var(--blue);}
+
+  /* ---------- CAROUSEL ---------- */
+  .carousel{position:relative; overflow:hidden;}
+  .track{
+    display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+    scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  }
+  .track::-webkit-scrollbar{display:none;}
+  .slide{
+    flex:0 0 100%; scroll-snap-align:center; scroll-snap-stop:always;
+    padding:0 16px; box-sizing:border-box;
+  }
+  .slide img{
+    width:100%; aspect-ratio:70/45; object-fit:cover; display:block;
+    border-radius:18px; box-shadow:0 4px 14px rgba(0,0,0,.10);
+  }
+  .dots{display:flex; justify-content:center; gap:7px; padding:12px 0 2px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:#d2d6dc;transition:background .25s,width .25s;}
+  .dot.on{background:var(--blue); width:9px; height:9px;}
+
+  /* ---------- QUICK CARDS ---------- */
+  .cards{display:flex; gap:12px; padding:4px 18px 6px;}
+  .qcard{flex:1; display:flex; flex-direction:column; align-items:center;}
+  .qcard .tile{
+    width:100%; aspect-ratio:1/0.82; border-radius:14px; overflow:hidden;
+    box-shadow:0 3px 9px rgba(0,0,0,.10);
+  }
+  .qcard .tile img{width:100%;height:100%;object-fit:cover;}
+  .qcard .lbl{font-size:13px; color:#3a3f47; margin-top:8px; text-align:center; line-height:1.2;}
+
+  /* ---------- LAS FIJAS ---------- */
+  .fijas{
+    display:flex; overflow-x:auto; gap:14px; padding:6px 18px 10px;
+    scroll-snap-type:x mandatory; scrollbar-width:none;
+  }
+  .fijas::-webkit-scrollbar{display:none;}
+  .fcard{
+    flex:0 0 86%; scroll-snap-align:center; background:#fff; border:1px solid #efefef;
+    border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,.05);
+    padding:16px 14px; min-height:150px; position:relative; display:flex; gap:14px;
+  }
+  .fcard .thumb{width:118px;height:118px;border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .fcard .thumb img{width:100%;height:100%;object-fit:cover;}
+  .fcard .q{font-size:16px; color:#2c2f36; line-height:1.3; flex:1; padding-top:4px;}
+  .fcard .chev{position:absolute; right:14px; bottom:12px;}
+  .fcard .chev svg{width:26px;height:26px;stroke:var(--blue);fill:none;stroke-width:2.4;}
+
+  /* ---------- BOTTOM NAV ---------- */
+  .nav{
+    flex-shrink:0; height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);
+    background:#fff; border-top:1px solid var(--line);
+    display:flex; align-items:stretch;
+  }
+  .nav button{
+    flex:1; background:none; border:none; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:3px; color:#aeb3ba; font-size:11px;
+    font-family:inherit; cursor:pointer;
+  }
+  .nav button svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.7;}
+  .nav button.on{color:var(--blue); font-weight:600;}
+
+  /* ---------- BLANK TABS ---------- */
+  .blank-hdr{
+    background:var(--navy); color:#fff; flex-shrink:0;
+    padding:calc(16px + env(safe-area-inset-top)) 18px 16px; font-size:18px; font-weight:700;
+  }
+  .blank-body{flex:1; display:flex; align-items:center; justify-content:center; color:#d7dadf; font-size:15px;}
+
+  /* ---------- MIS CURSOS: LISTA ---------- */
+  .cv{display:none; flex:1; flex-direction:column; overflow:hidden;}
+  .cv.on{display:flex;}
+  .cv-tabtop{display:flex; justify-content:center; padding:16px 0 2px;}
+  .cv-tabtop .t{font-size:16px; font-weight:700; color:#20232a; padding-bottom:9px; border-bottom:3px solid #1ec8e6;}
+  .cv-label{font-size:16px; font-weight:800; color:#20232a; padding:14px 18px 10px;}
+  .prog-card{margin:0 18px; background:#5577c9; color:#fff; border-radius:16px; padding:22px 16px; text-align:center;}
+  .prog-card svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:1.5; margin-bottom:12px;}
+  .prog-card .pn{font-size:15px;}
+  .periodo{margin:14px 18px 0; border:1px solid #e9e9e9; border-radius:12px; padding:14px 16px;}
+  .periodo .k{font-size:13px; font-weight:700; color:#2f2f33;}
+  .periodo .v{font-size:14px; color:#555; margin-top:3px;}
+  .course-list{padding:18px 18px 10px; display:flex; flex-direction:column; gap:16px;}
+  .course{display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #efefef;
+          border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.05); padding:18px 16px; cursor:pointer;
+          transition:transform .08s, box-shadow .08s;}
+  .course:active{transform:scale(.985); box-shadow:0 1px 5px rgba(0,0,0,.10);}
+  .course .cbadge{width:46px;height:46px;border-radius:50%;background:#001E64;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .course .cbadge svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.5;}
+  .course .cn{font-size:16px; color:#2b2f36; line-height:1.25;}
+  .course .cc{font-size:14px; color:#3b7bd4; margin-top:4px;}
+
+  /* ---------- DETALLE DE CURSO ---------- */
+  .hdr-detail{background:var(--navy); color:#fff; flex-shrink:0;
+              padding:calc(10px + env(safe-area-inset-top)) 16px 16px;}
+  .hdr-detail .back{background:none;border:none;padding:0;margin:0 0 8px;cursor:pointer;display:block;}
+  .hdr-detail .back svg{width:26px;height:26px;stroke:#1ec8e6;fill:none;stroke-width:2.6;}
+  .hdr-detail .ctitle{font-size:18px;font-weight:700;}
+  .aula-btn{margin:16px 18px 0; background:#031a52; color:#fff; border-radius:12px;
+            padding:16px; font-weight:700; font-size:15px; display:flex; align-items:center;
+            justify-content:center; gap:10px;}
+  .aula-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.6;}
+  .d-tabs{display:flex; border-bottom:1px solid #ececec; margin-top:18px;}
+  .d-tabs .dt{flex:1; text-align:center; padding:12px 0; font-size:15px; color:#9aa0a8; cursor:pointer;}
+  .d-tabs .dt.on{color:#20232a; font-weight:700; border-bottom:3px solid #1ec8e6;}
+  .inas{margin:18px 18px 0; background:#dce1ea; border-radius:14px; padding:18px 16px; position:relative;}
+  .inas .it{font-size:17px; font-weight:800; color:#0a1a4a;}
+  .inas .il{font-size:14px; color:#2f3a5a; margin:6px 0 10px;}
+  .inas .bar{height:8px; border-radius:6px; background:#b9c0cf; overflow:hidden; width:76%;}
+  .inas .bar > i{display:block; height:100%; background:#0a1a4a; border-radius:6px;}
+  .inas .face{position:absolute; right:18px; top:22px;}
+  .inas .face svg{width:56px;height:56px;}
+  .inas .vd{font-size:13px; color:#2f3a5a; margin-top:12px;}
+  .notas-h{font-size:18px; font-weight:800; color:#20232a; padding:20px 18px 10px;}
+  .prom{margin:0 18px; background:#fff; border:1px solid #efefef; border-radius:12px;
+        box-shadow:0 3px 10px rgba(0,0,0,.05); padding:16px; display:flex; align-items:center; gap:14px;}
+  .prom .medal{width:54px;height:54px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .prom .medal svg{width:30px;height:30px;stroke:#001E64;fill:none;stroke-width:1.5;}
+  .prom .pl{flex:1; font-size:16px; color:#2b2f36;}
+  .prom .pv{font-size:30px; font-weight:800; color:#1a1a1a;}
+  .evh{display:flex; justify-content:space-between; padding:18px 20px 6px; font-size:12px; letter-spacing:.5px; color:#8a8f98; font-weight:700;}
+  .evrow{display:flex; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #f1f1f1; font-size:15px; color:#3a3f47;}
+  .evrow .nota{font-weight:700; color:#1a1a1a;}
+  .rect{margin:18px 18px 14px; background:#dceaf6; border-radius:12px; padding:16px; display:flex; gap:12px; align-items:flex-start;}
+  .rect .ic{width:22px;height:22px;border-radius:50%;background:#1f73e0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;font-style:italic;flex-shrink:0;}
+  .rect .rt{font-size:15px; color:#2b2f36; font-weight:700;}
+  .rect .rl{font-size:14px; color:#1f73e0; margin-top:3px;}
+
+  /* ---------- CALENDARIO ---------- */
+  .cal-top{background:#eef0f3; padding:16px 18px; display:flex; align-items:center; gap:14px;}
+  .cal-top .mlabel{font-size:17px; font-weight:800; color:#1f2a44;}
+  .cal-top .marrows{display:flex; gap:16px;}
+  .cal-top .marrows svg{width:20px;height:20px;stroke:#1f2a44;fill:none;stroke-width:2.6;cursor:pointer;}
+  .cal-top .hoy{margin-left:auto; background:#d7def0; color:#3a4a7a; font-weight:700; padding:12px 22px; border-radius:10px; font-size:13px; cursor:pointer;}
+  .cal-strip{display:flex; gap:10px; overflow-x:auto; padding:14px 18px; scrollbar-width:none;}
+  .cal-strip::-webkit-scrollbar{display:none;}
+  .cal-day{min-width:62px; flex:0 0 auto; background:#f0f1f3; border-radius:12px; padding:10px 0 12px; text-align:center; cursor:pointer;}
+  .cal-day .dn{font-size:11px; letter-spacing:.5px; color:#9aa0a8; font-weight:600;}
+  .cal-day .dd{font-size:20px; font-weight:700; color:#6a6f76; margin-top:5px;}
+  .cal-day.today{background:#cfe0ff;}
+  .cal-day.today .dn,.cal-day.today .dd{color:#1b3a8a;}
+  .cal-day.sel{background:#001E64;}
+  .cal-day.sel .dn,.cal-day.sel .dd{color:#fff;}
+  .ev-card{margin:18px; background:#fff; border-radius:10px; box-shadow:0 3px 12px rgba(0,0,0,.08); border-left:6px solid #001E64; padding:16px 16px 18px;}
+  .ev-time{font-size:14px; color:#4a4f57;}
+  .ev-title{font-size:17px; font-weight:700; color:#1f2329; margin:8px 0 12px; line-height:1.3;}
+  .ev-mod{color:#3b7bd4; font-size:15px; margin-bottom:10px;}
+  .ev-row{font-size:14px; color:#3a3f47; margin-top:5px;}
+  .ev-empty{margin:60px 24px; text-align:center; color:#b7bcc3; font-size:15px; line-height:1.6;}
+
+  /* ---------- FINANZAS ---------- */
+  .fin-band{background:#0aa3b0; color:#fff; display:flex; align-items:center; justify-content:center; gap:14px; padding:20px 18px;}
+  .fin-band svg{width:42px;height:42px;stroke:#fff;fill:none;stroke-width:2;}
+  .fin-band span{font-size:17px; font-weight:600;}
+  .fin-total{text-align:center; font-size:24px; font-weight:800; color:#001E64; padding:26px 0 18px;}
+  .fin-card{margin:0 18px; border:1px solid #e3e3e3; border-radius:14px; padding:26px 18px; text-align:center;}
+  .fin-card .big{font-size:30px; font-weight:800; color:#1a1a1a;}
+  .fin-card .sub{font-size:14px; color:#555; margin-top:8px;}
+  .fin-card .pay{margin-top:20px; background:#e9eaec; color:#aeb3ba; border:none; font-family:inherit; font-weight:700; font-size:15px; padding:15px 28px; border-radius:10px; display:inline-flex; align-items:center; gap:10px;}
+  .fin-card .pay svg{width:20px;height:20px;stroke:#aeb3ba;fill:none;stroke-width:1.8;}
+  .fin-detail{display:block; margin:18px auto 0; background:#e4e8f2; color:#3a4a7a; font-weight:700; font-size:14px; padding:14px 26px; border-radius:10px; border:1px solid #d3d8e6; cursor:pointer;}
+  .fin-note{text-align:center; font-size:13px; color:#8a8f98; margin:12px 18px 0;}
+  .fin-grid{display:flex; gap:14px; padding:22px 18px 10px;}
+  .fin-tile{flex:1; background:#001E64; color:#fff; border-radius:12px; padding:20px 16px; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; gap:24px;}
+  .fin-tile svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:1.8;}
+  .fin-tile .tt{font-size:17px; line-height:1.25;}
+  .fin-tile .tt b{font-weight:800;}
+
+  /* ---------- MENÚ ---------- */
+  .menu-hdr{background:var(--navy); color:#fff; flex-shrink:0;
+            padding:calc(16px + env(safe-area-inset-top)) 18px 18px; display:flex; align-items:center;}
+  .menu-hdr .mt{font-size:18px; font-weight:700; flex:1;}
+  .menu-hdr .ico{display:flex; gap:16px;}
+  .menu-hdr .ico svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.8;}
+  .prof{margin:18px; background:#fff; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.06); padding:18px 16px; display:flex; align-items:center; gap:14px;}
+  .prof > svg{width:26px;height:26px;stroke:#1f2329;fill:none;stroke-width:1.6;flex-shrink:0;}
+  .prof .pn{flex:1; font-weight:700; font-size:16px; color:#1f2329; letter-spacing:.4px;}
+  .prof .ch{width:20px;height:20px;stroke:#1f2329;fill:none;stroke-width:2;}
+  .mgrid{display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:6px 18px 0;}
+  .mtile{background:#fff; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.06); padding:22px 12px; text-align:center; min-height:112px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;}
+  .mtile svg{width:26px;height:26px;stroke:#1f73e0;fill:none;stroke-width:1.6;}
+  .mtile .ml{font-size:15px; font-weight:700; color:#2b2f36; line-height:1.25;}
+  .otros{font-size:17px; font-weight:800; color:#20232a; padding:20px 18px 10px;}
+  .mrow{margin:0 18px 14px; background:#fff; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,.06); padding:18px 16px; display:flex; align-items:center; gap:16px;}
+  .mrow svg{width:24px;height:24px;stroke:#1f73e0;fill:none;stroke-width:1.6;flex-shrink:0;}
+  .mrow .rl{font-size:16px; font-weight:700; color:#2b2f36;}
+  .mver{text-align:right; font-size:13px; color:#9aa0a8; padding:4px 18px 0;}
+  .logout{display:flex; align-items:center; justify-content:center; gap:10px; padding:28px 0 20px; color:#1f3a8a; font-weight:700; font-size:16px;}
+  .logout svg{width:24px;height:24px;stroke:#1f3a8a;fill:none;stroke-width:1.8;}
+</style>
+</head>
+<body>
+
+  <!-- ===== SPLASH ===== -->
+  <div id="splash">
+    <img class="logo" src="img/logo.png" alt="Certus">
+    <div id="loadtext">Cargando: 0%</div>
+    <div id="ver">v.1.9.0</div>
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app">
+
+    <!-- INICIO -->
+    <section class="screen active" id="s-inicio">
+      <div class="hdr">
+        <div class="ava">
+          <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5Z"/></svg>
+        </div>
+        <div class="hi">Hola, Ronald Josue</div>
+        <div class="ico">
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="sect-title">CERTUS te mantiene informado</div>
+
+        <div class="carousel">
+          <div class="track" id="track">
+            <div class="slide"><img src="img/banner1.jpg" alt=""></div>
+            <div class="slide"><img src="img/banner2.jpg" alt=""></div>
+            <div class="slide"><img src="img/banner3.jpg" alt=""></div>
+            <div class="slide"><img src="img/banner4.jpg" alt=""></div>
+          </div>
+          <div class="dots" id="dots">
+            <span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          </div>
+        </div>
+
+        <div class="sect-title">Lo que necesitas en un solo clic</div>
+        <div class="cards">
+          <div class="qcard"><div class="tile"><img src="img/card1.jpg" alt=""></div><div class="lbl">Conoce tu sede</div></div>
+          <div class="qcard"><div class="tile"><img src="img/card2.jpg" alt=""></div><div class="lbl">Mi fecha de pago</div></div>
+          <div class="qcard"><div class="tile"><img src="img/card3.jpg" alt=""></div><div class="lbl">Medios de pago</div></div>
+        </div>
+
+        <div class="sect-title">Las <span class="accent">fijas</span></div>
+        <div class="fijas">
+          <div class="fcard">
+            <div class="thumb"><img src="img/fija1.jpg" alt=""></div>
+            <div class="q">¿Dónde encuentro mis accesos?</div>
+            <div class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="fcard">
+            <div class="thumb"><img src="img/fija2.jpg" alt=""></div>
+            <div class="q">Me matriculé en un curso y cerraron el horario, ¿qué puedo hacer?</div>
+            <div class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="fcard">
+            <div class="thumb"><img src="img/fija3.jpg" alt=""></div>
+            <div class="q">¿Cómo puedo saber la modalidad de mi carrera para este período 2023-1?</div>
+            <div class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="fcard">
+            <div class="thumb"><img src="img/fija4.jpg" alt=""></div>
+            <div class="q">¿Tienes consultas? Escríbenos mediante nuestros canales de atención</div>
+            <div class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+          <div class="fcard">
+            <div class="thumb"><img src="img/fija5.jpg" alt=""></div>
+            <div class="q">¿Cómo obtengo mi carné de medio pasaje?</div>
+            <div class="chev"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MIS CURSOS -->
+    <section class="screen" id="s-cursos">
+
+      <!-- LISTA -->
+      <div class="cv on" id="cv-list">
+        <div class="hdr">
+          <div class="ava">
+            <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5Z" fill="#001E64"/></svg>
+          </div>
+          <div class="hi">Mis cursos CERTUS</div>
+          <div class="ico">
+            <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+          </div>
+        </div>
+        <div class="body">
+          <div class="cv-tabtop"><span class="t">Pregrado</span></div>
+          <div class="cv-label">Programa:</div>
+          <div class="prog-card">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-4 9 4-9 4-9-4Z"/><path d="M7 11v4c0 1.5 2.5 2.5 5 2.5s5-1 5-2.5v-4"/></svg>
+            <div class="pn">Arquitectura sist inf (semi 4)</div>
+          </div>
+          <div class="periodo"><div class="k">Periodo</div><div class="v">2026-2</div></div>
+          <div class="course-list" id="course-list"><!-- JS --></div>
+        </div>
+      </div>
+
+      <!-- DETALLE -->
+      <div class="cv" id="cv-detail">
+        <div class="hdr-detail">
+          <button class="back" onclick="backToCursos()" aria-label="Atrás">
+            <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          </button>
+          <div class="ctitle" id="d-title">Curso</div>
+        </div>
+        <div class="body">
+          <div class="aula-btn">Ver en aula virtual
+            <svg viewBox="0 0 24 24"><path d="M3 7l9-3 9 3-9 3-9-3Z"/><path d="M6 9v4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V9"/></svg>
+          </div>
+          <div class="d-tabs">
+            <div class="dt on">Avance del curso</div>
+            <div class="dt">Información</div>
+          </div>
+          <div class="inas">
+            <div class="it">Inasistencias: <span id="d-inas">0</span></div>
+            <div class="il">Límite: -</div>
+            <div class="bar"><i id="d-bar" style="width:100%"></i></div>
+            <div class="face" id="d-face"></div>
+            <div class="vd">Ver detalle ▶</div>
+          </div>
+          <div class="notas-h">Notas</div>
+          <div class="prom">
+            <div class="medal">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M9 13l-2 7 5-3 5 3-2-7"/></svg>
+            </div>
+            <div class="pl">Promedio</div>
+            <div class="pv" id="d-prom">--</div>
+          </div>
+          <div class="evh"><span>EVALUACIÓN</span><span>NOTA</span></div>
+          <div id="d-rows"><!-- JS --></div>
+          <div class="rect">
+            <div class="ic">i</div>
+            <div><div class="rt">¿Cómo rectificar una nota?</div><div class="rl">Ingresa aquí</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- CALENDARIO -->
+    <section class="screen" id="s-calendario">
+      <div class="hdr">
+        <div class="ava"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5Z" fill="#001E64"/></svg></div>
+        <div class="hi">Mi calendario CERTUS</div>
+        <div class="ico">
+          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="9" y1="3" x2="9" y2="6"/><line x1="15" y1="3" x2="15" y2="6"/><line x1="15" y1="15" x2="15" y2="15"/><line x1="12.5" y1="14" x2="17.5" y2="14"/><line x1="15" y1="11.5" x2="15" y2="16.5"/></svg>
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        </div>
+      </div>
+      <div class="body">
+        <div class="cal-top">
+          <div class="mlabel" id="cal-month">Noviembre 2026</div>
+          <div class="marrows">
+            <svg onclick="calShift(-1)" viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+            <svg onclick="calShift(1)" viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19"/></svg>
+          </div>
+          <div class="hoy" onclick="calHoy()">HOY</div>
+        </div>
+        <div class="cal-strip" id="cal-strip"></div>
+        <div id="cal-event"></div>
+      </div>
+    </section>
+
+    <!-- FINANZAS -->
+    <section class="screen" id="s-finanzas">
+      <div class="hdr">
+        <div class="ava"><svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5Z" fill="#001E64"/></svg></div>
+        <div class="hi">Mis finanzas CERTUS</div>
+        <div class="ico">
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        </div>
+      </div>
+      <div class="body">
+        <div class="fin-band">
+          <svg viewBox="0 0 38 38"><circle cx="19" cy="19" r="16"/><circle cx="14" cy="16" r="1.6" fill="#fff" stroke="none"/><circle cx="24" cy="16" r="1.6" fill="#fff" stroke="none"/><path d="M14 24c1.6 2.2 8.4 2.2 10 0" stroke-linecap="round"/></svg>
+          <span>Estás al día en tus pagos</span>
+        </div>
+        <div class="fin-total">Total a pagar:</div>
+        <div class="fin-card">
+          <div class="big">S/ 0.00</div>
+          <div class="sub">Deuda vencida: S/ 0.00</div>
+          <div class="sub" style="margin-top:2px;">Deuda pendiente: S/ 0.00</div>
+          <button class="pay">Pagar cuota
+            <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </button>
+        </div>
+        <button class="fin-detail">Ver detalle de cuotas ▶</button>
+        <div class="fin-note">*La deuda pendiente no está afecta al financiamiento</div>
+        <div class="fin-grid">
+          <div class="fin-tile">
+            <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <div class="tt">Medios<br><b>de pago</b></div>
+          </div>
+          <div class="fin-tile">
+            <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="9" y1="3" x2="9" y2="6"/><line x1="15" y1="3" x2="15" y2="6"/></svg>
+            <div class="tt">Visualiza tu<br><b>cronograma</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MENÚ -->
+    <section class="screen" id="s-menu">
+      <div class="menu-hdr">
+        <div class="mt">Menú</div>
+        <div class="ico">
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        </div>
+      </div>
+      <div class="body">
+        <div class="prof">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+          <div class="pn">RONALD JOSUE</div>
+          <svg class="ch" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>
+        <div class="mgrid">
+          <div class="mtile">
+            <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+            <div class="ml">Canales y plataformas</div>
+          </div>
+          <div class="mtile">
+            <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+            <div class="ml">Historial académico</div>
+          </div>
+          <div class="mtile">
+            <div class="ml">Información legal</div>
+          </div>
+          <div class="mtile">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="15" height="14" rx="1.5"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="12" y2="12"/><line x1="6" y1="15" x2="10" y2="15"/><path d="M18 8h2a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2"/></svg>
+            <div class="ml">Noticias CERTUS</div>
+          </div>
+        </div>
+        <div class="otros">Otros</div>
+        <div class="mrow">
+          <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 1 1-3.5-6.6"/><path d="M9.5 9a2.5 2.5 0 1 1 3 2.5c-.8.3-1 .8-1 1.5"/><circle cx="11.5" cy="16" r=".6" fill="#1f73e0" stroke="none"/></svg>
+          <div class="rl">Preguntas frecuentes</div>
+        </div>
+        <div class="mrow">
+          <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7Z"/><polyline points="14 3 14 8 19 8"/></svg>
+          <div class="rl">Solicitudes</div>
+        </div>
+        <div class="mrow">
+          <svg viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4Z"/></svg>
+          <div class="rl">Tus comentarios sobre la app</div>
+        </div>
+        <div class="mver">Versión 1.9.0</div>
+        <div class="logout">
+          <svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><polyline points="10 8 14 12 10 16"/><line x1="14" y1="12" x2="4" y2="12"/></svg>
+          Cerrar sesión
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM NAV -->
+    <nav class="nav" id="nav">
+      <button class="on" data-s="inicio">
+        <svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg>Inicio</button>
+      <button data-s="cursos">
+        <svg viewBox="0 0 24 24"><path d="M4 5h7v14H4z"/><path d="M13 5h7v14h-7z"/></svg>Mis cursos</button>
+      <button data-s="calendario">
+        <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="9" y1="3" x2="9" y2="6"/><line x1="15" y1="3" x2="15" y2="6"/></svg>Calendario</button>
+      <button data-s="finanzas">
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8c-1.6 0-2.5.8-2.5 1.8S10.4 11.6 12 12s2.5.9 2.5 2-1 1.8-2.5 1.8"/><line x1="12" y1="7" x2="12" y2="17"/></svg>Finanzas</button>
+      <button data-s="menu">
+        <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>Menú</button>
+    </nav>
+  </div>
+
+<script>
+  /* ---------- SPLASH LOADER (≈30 s) ---------- */
+  var SPLASH_MS = 30000;
+  var start = performance.now();
+  var loadtext = document.getElementById('loadtext');
+  function tick(now){
+    var t = Math.min(1, (now - start) / SPLASH_MS);
+    var pct = Math.min(100, Math.floor(100 * Math.pow(t, 1.6)));
+    loadtext.textContent = 'Cargando: ' + pct + '%';
+    if(t < 1){ requestAnimationFrame(tick); }
+    else { finish(); }
+  }
+  function finish(){
+    loadtext.textContent = 'Cargando: 100%';
+    var sp = document.getElementById('splash');
+    sp.classList.add('hide');
+    document.getElementById('app').classList.add('show');
+    setTimeout(function(){ sp.style.display = 'none'; }, 520);
+  }
+  requestAnimationFrame(tick);
+
+  /* ---------- CAROUSEL (auto + swipe + dots, loop 4) ---------- */
+  var track = document.getElementById('track');
+  var dots = Array.prototype.slice.call(document.querySelectorAll('#dots .dot'));
+  var idx = 0, auto;
+  function go(i){
+    idx = (i + 4) % 4;
+    track.scrollTo({ left: idx * track.clientWidth, behavior: 'smooth' });
+  }
+  function setDots(i){ dots.forEach(function(d,n){ d.classList.toggle('on', n===i); }); }
+  track.addEventListener('scroll', function(){
+    var i = Math.round(track.scrollLeft / track.clientWidth);
+    if(i !== idx){ idx = i; setDots(i); }
+  });
+  function startAuto(){ auto = setInterval(function(){ go(idx + 1); }, 4000); }
+  function stopAuto(){ clearInterval(auto); }
+  track.addEventListener('touchstart', stopAuto, {passive:true});
+  track.addEventListener('touchend', function(){ stopAuto(); startAuto(); }, {passive:true});
+  startAuto();
+
+  /* ---------- TABS ---------- */
+  var nav = document.getElementById('nav');
+  nav.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    var s = b.dataset.s;
+    document.querySelectorAll('.screen').forEach(function(sc){ sc.classList.remove('active'); });
+    document.getElementById('s-' + s).classList.add('active');
+    nav.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    if(s === 'cursos') backToCursos();   // siempre entra a la lista
+    if(s === 'calendario' && window.calRefresh) window.calRefresh();
+  });
+
+  /* ---------- MIS CURSOS (datos + navegación) ---------- */
+  // Notas: 4 evaluaciones con nota; EVAL 1-2 en 13-17 y EVAL 3-4 en 14-16.
+  // Se muestran ordenadas de menor a mayor (arriba->abajo). Curso "tomado" completo.
+  // Inasistencias: 0 en todos, salvo el primer curso con 1.
+  var COURSES = [
+    { name:"Análisis y Diseño de Soluciones de TI",     code:"312", inas:1, n1:13, n2:15, n3:14, n4:16 },
+    { name:"Diseño de Soluciones Basadas en Servicios", code:"503", inas:0, n1:14, n2:17, n3:15, n4:16 },
+    { name:"Plan de Desarrollo de Negocio de TI",       code:"698", inas:0, n1:13, n2:16, n3:14, n4:15 },
+    { name:"Infraestructuras y plataformas",            code:"775", inas:0, n1:15, n2:17, n3:14, n4:16 }
+  ];
+
+  function faceSVG(happy){
+    var mouth = happy
+      ? '<path d="M16 25c1.6 2.2 4.4 2.2 6 0" stroke="#0a1a4a" stroke-width="2.2" fill="none" stroke-linecap="round"/>'
+      : '<path d="M16 27c1.6-2.2 4.4-2.2 6 0" stroke="#0a1a4a" stroke-width="2.2" fill="none" stroke-linecap="round"/>';
+    return '<svg viewBox="0 0 38 38">'
+      + '<circle cx="19" cy="19" r="16" stroke="#0a1a4a" stroke-width="2" fill="none"/>'
+      + '<circle cx="14" cy="16" r="1.7" fill="#0a1a4a"/><circle cx="24" cy="16" r="1.7" fill="#0a1a4a"/>'
+      + mouth + '</svg>';
+  }
+
+  function renderCourseList(){
+    var book = '<svg viewBox="0 0 24 24"><path d="M4 5h7v14H4z"/><path d="M13 5h7v14h-7z"/></svg>';
+    var html = COURSES.map(function(c,i){
+      return '<div class="course" onclick="openCourse('+i+')">'
+           + '<div class="cbadge">'+book+'</div>'
+           + '<div class="cinfo"><div class="cn">'+c.name+'</div><div class="cc">'+c.code+'</div></div>'
+           + '</div>';
+    }).join('');
+    document.getElementById('course-list').innerHTML = html;
+  }
+
+  function openCourse(i){
+    var c = COURSES[i];
+    document.getElementById('d-title').textContent = c.name;
+    document.getElementById('d-inas').textContent = c.inas;
+    document.getElementById('d-face').innerHTML = faceSVG(c.inas === 0);
+    document.getElementById('d-bar').style.width = c.inas === 0 ? '0%' : '22%';
+    document.getElementById('d-prom').textContent = Math.round((c.n1 + c.n2 + c.n3 + c.n4) / 4);
+    // Evaluaciones: 4 con nota, ordenadas de menor a mayor (arriba->abajo)
+    var rows = [
+      ['EVALUACIÓN 1', c.n1],
+      ['EVALUACIÓN 2', c.n2],
+      ['EVALUACIÓN 3', c.n3],
+      ['EVALUACIÓN 4', c.n4]
+    ];
+    rows.sort(function(a, b){ return a[1] - b[1]; });
+    document.getElementById('d-rows').innerHTML = rows.map(function(r){
+      return '<div class="evrow"><span>'+r[0]+'</span><span class="nota">'+r[1]+'</span></div>';
+    }).join('');
+    document.getElementById('cv-list').classList.remove('on');
+    document.getElementById('cv-detail').classList.add('on');
+  }
+
+  function backToCursos(){
+    document.getElementById('cv-detail').classList.remove('on');
+    document.getElementById('cv-list').classList.add('on');
+  }
+  renderCourseList();
+
+  /* ---------- CALENDARIO (días en carrusel + evento del día) ---------- */
+  (function(){
+    var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];           // getDay(): 0=DOM
+    // Curso por día de semana. null = día libre (Domingo y Martes).
+    var SCHED={
+      0:null,                                                        // Domingo libre
+      1:{c:'Análisis y Diseño de Soluciones de TI',    t:'07:00 – 10:45'},
+      2:null,                                                        // Martes libre
+      3:{c:'Diseño de Soluciones Basadas en Servicios',t:'19:00 – 22:15'},
+      4:{c:'Infraestructuras y plataformas',           t:'07:00 – 10:45'},
+      5:{c:'Plan de Desarrollo de Negocio de TI',      t:'19:00 – 22:15'},
+      6:{c:'Análisis y Diseño de Soluciones de TI',    t:'09:00 – 12:15'}   // repite (igual que lunes)
+    };
+    var today=new Date(); today.setHours(0,0,0,0);
+    var offMon=(today.getDay()+6)%7;
+    var start=new Date(today); start.setDate(today.getDate()-offMon);  // lunes de esta semana
+    var days=[];
+    for(var i=0;i<14;i++){ var d=new Date(start); d.setDate(start.getDate()+i); days.push(d); }
+    var selIdx=0;
+    for(var k=0;k<days.length;k++){ if(days[k].getTime()===today.getTime()){ selIdx=k; break; } }
+
+    function same(a,b){ return a.getTime()===b.getTime(); }
+    function renderStrip(){
+      document.getElementById('cal-strip').innerHTML=days.map(function(d,i){
+        var cls='cal-day'+(i===selIdx?' sel':(same(d,today)?' today':''));
+        return '<div class="'+cls+'" onclick="calSelect('+i+')"><div class="dn">'+DOW[d.getDay()]+'</div><div class="dd">'+d.getDate()+'</div></div>';
+      }).join('');
+    }
+    function renderEvent(){
+      var d=days[selIdx], s=SCHED[d.getDay()];
+      document.getElementById('cal-month').textContent=MESES[d.getMonth()]+' '+d.getFullYear();
+      var box=document.getElementById('cal-event');
+      if(!s){ box.innerHTML='<div class="ev-empty">No tienes clases programadas<br>este día</div>'; return; }
+      box.innerHTML='<div class="ev-card">'
+        +'<div class="ev-time">'+s.t+'</div>'
+        +'<div class="ev-title">'+s.c+'</div>'
+        +'<div class="ev-mod">Virtual</div>'
+        +'<div class="ev-row">Sede: Principal certus</div>'
+        +'<div class="ev-row">Aula: Av_certus</div>'
+        +'<div class="ev-row">Regular</div>'
+        +'</div>';
+    }
+    function scrollToSel(){
+      var strip=document.getElementById('cal-strip'); var el=strip.children[selIdx];
+      if(el) el.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+    }
+    window.calSelect=function(i){ selIdx=i; renderStrip(); renderEvent(); scrollToSel(); };
+    window.calHoy=function(){ for(var i=0;i<days.length;i++){ if(same(days[i],today)){ window.calSelect(i); return; } } };
+    window.calShift=function(dir){ document.getElementById('cal-strip').scrollBy({left:dir*230,behavior:'smooth'}); };
+    window.calRefresh=scrollToSel;
+    renderStrip(); renderEvent();
+  })();
+
+  /* ---------- PWA service worker ---------- */
+
+  /* ---------- PWA service worker ---------- */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+</script>
+</body>
+</html>
